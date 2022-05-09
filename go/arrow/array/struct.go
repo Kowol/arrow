@@ -313,7 +313,6 @@ func (b *StructBuilder) unmarshalOne(dec *json.Decoder) error {
 			if err != nil {
 				return err
 			}
-
 			key, ok := keyTok.(string)
 			if !ok {
 				return errors.New("missing key")
@@ -334,6 +333,18 @@ func (b *StructBuilder) unmarshalOne(dec *json.Decoder) error {
 				return err
 			}
 		}
+
+		// Append null values to all optional fields that were not presented in the json input
+		for _, field := range b.dtype.(*arrow.StructType).Fields() {
+			if !field.Nullable {
+				continue
+			}
+			idx, _ := b.dtype.(*arrow.StructType).FieldIdx(field.Name)
+			if _, hasKey := keylist[field.Name]; !hasKey {
+				b.fields[idx].AppendNull()
+			}
+		}
+
 		// consume '}'
 		_, err := dec.Token()
 		return err
