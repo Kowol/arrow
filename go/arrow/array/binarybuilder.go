@@ -225,9 +225,14 @@ func (b *BinaryBuilder) unmarshalOne(dec *json.Decoder) error {
 
 	switch v := t.(type) {
 	case string:
+		var data []byte
 		data, err := base64.StdEncoding.DecodeString(v)
 		if err != nil {
-			return err
+			rawData, subErr := base64.RawStdEncoding.DecodeString(v)
+			if subErr != nil {
+				return err // Return main error
+			}
+			data = rawData
 		}
 		b.Append(data)
 	case []byte:

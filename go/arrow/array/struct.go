@@ -337,12 +337,18 @@ func (b *StructBuilder) unmarshalOne(dec *json.Decoder) error {
 
 		// Append null values to all optional fields that were not presented in the json input
 		for _, field := range b.dtype.(*arrow.StructType).Fields() {
-			if !field.Nullable {
-				continue
-			}
-			idx, _ := b.dtype.(*arrow.StructType).FieldIdx(field.Name)
-			if _, hasKey := keylist[field.Name]; !hasKey {
-				b.fields[idx].AppendNull()
+			if field.Nullable {
+				if _, hasKey := keylist[field.Name]; !hasKey {
+					idx, _ := b.dtype.(*arrow.StructType).FieldIdx(field.Name)
+					b.fields[idx].AppendNull()
+				}
+			} else if _, isList := field.Type.(*arrow.ListType); isList {
+				if _, hasKey := keylist[field.Name]; !hasKey {
+					idx, _ := b.dtype.(*arrow.StructType).FieldIdx(field.Name)
+					if _, ensureIsList := b.fields[idx].(*ListBuilder); ensureIsList {
+						b.fields[idx].(*ListBuilder).Append(true)
+					}
+				}
 			}
 		}
 
